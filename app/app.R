@@ -4,9 +4,24 @@
 # ==============================================================================
 
 # 1. 自動加載與安裝依賴套件
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load(shiny, bslib, tidyverse, scales, shinyjs, shinyWidgets, munsell, showtext)
+# ==============================================================================
+# 1. 載入必備套件 (ShinyLive 專用寫法，嚴禁使用 pacman)
+# ==============================================================================
+library(shiny)
+library(bslib)
+library(tidyverse)
+library(scales)
+library(shinyjs)
+library(shinyWidgets)
+library(munsell)
+library(showtext)
 
+# --- 關鍵：處理 ShinyLive 中文字型 ---
+# 從 Google Fonts 下載思源黑體，確保瀏覽器環境能正確顯示中文標籤
+font_add_google("Noto Sans TC", "noto_sans_tc")
+showtext_auto()
+
+# ... (下方字典與 UI 邏輯完全保持不變) ...
 # --- 關鍵：處理 ShinyLive 中文字型 ---
 # 從 Google Fonts 下載思源黑體，確保瀏覽器環境能正確顯示中文標籤
 font_add_google("Noto Sans TC", "noto_sans_tc")
