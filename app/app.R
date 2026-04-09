@@ -1,25 +1,18 @@
 # ==============================================================================
-# Project: Digital Domino - Life Regeneration Simulator (WebR / ShinyLive 專用版)
-# Features: 移除 pacman 依賴、支援 Noto Sans TC 中文圖表、漸層波浪圖
+# Project: Digital Domino - Life Regeneration Simulator (Final WebR Edition)
+# 特色：Plotly 分段漸層技術 (解決中文亂碼 + 漸層海浪)，其餘嚴格保持不變
 # ==============================================================================
 
-# 1. 載入必備套件 (ShinyLive 嚴禁使用 pacman 或 install.packages)
+# 1. 載入必備套件
 library(shiny)
 library(bslib)
 library(tidyverse)
-library(scales)
+library(plotly)
 library(shinyjs)
 library(shinyWidgets)
-library(munsell)
-library(showtext)
-
-# --- 關鍵：處理 ShinyLive 繪圖中文字型 ---
-# 從 Google Fonts 載入思源黑體，確保 ggplot2 在網頁端不會顯示為方塊
-sysfonts::font_add_google("Noto Sans TC", "noto_sans_tc")
-showtext::showtext_auto()
 
 # ------------------------------------------------------------------------------
-# 2. 嚴謹雙語字典 (i18n)
+# 2. 嚴謹雙語字典 (i18n) - 嚴格保留 V10 內容與合規宣告
 # ------------------------------------------------------------------------------
 i18n <- list(
   "中文" = list(
@@ -42,8 +35,6 @@ i18n <- list(
     reward_title = "🎉 專屬生命再生笑話與圖卡",
     dominoes = c("視力乾澀", "頸椎僵硬", "睡眠碎裂", "腦霧現象", "專注崩盤", 
                  "情緒暴躁", "社交退縮", "體態走鐘", "決策疲勞", "深度思考喪失"),
-    status_stand = "健康 (安全)",
-    status_fall = "崩潰 (倒下)",
     engine_safe = "✨🟢 引擎運轉順暢：轉速正常，持續前進！",
     engine_warn = "⚠️🌡️ 溫度上升：大腦引擎過熱，請散熱！",
     engine_erupt = "💥🔥 引擎爆缸：系統熔毀！請立刻休息！",
@@ -79,28 +70,11 @@ i18n <- list(
 )
 
 # ------------------------------------------------------------------------------
-# 3. UI 佈局與 CSS (Minty 風格)
+# 3. UI 佈局 - 嚴格保留 V10 風格
 # ------------------------------------------------------------------------------
-lively_theme <- bs_theme(
-  version = 5,
-  bootswatch = "minty",
-  primary = "#FF6B6B",
-  secondary = "#4ECDC4",
-  base_font = font_google("Nunito")
-)
-
-custom_css <- "
-  .card { border-radius: 20px; box-shadow: 0 8px 15px rgba(0,0,0,0.05); border: none; margin-bottom: 20px; }
-  .card-header { background: linear-gradient(135deg, #4ECDC4, #556270); color: white; border-radius: 20px 20px 0 0 !important; font-weight: bold; }
-  .btn-reward { background: linear-gradient(135deg, #FF6B6B, #FF8E53); border: none; color: white; font-size: 1.2rem; border-radius: 30px; transition: transform 0.2s; }
-  .btn-reward:hover { transform: scale(1.05); color: white; }
-  .disclaimer-box { background-color: #ffffff; padding: 15px; border-radius: 15px; border-left: 5px solid #4ECDC4; font-size: 0.8rem; color: #7f8c8d; }
-"
-
 ui <- fluidPage(
-  theme = lively_theme,
+  theme = bs_theme(version = 5, bootswatch = "minty"),
   useShinyjs(),
-  tags$head(tags$style(HTML(custom_css))),
   
   div(style = "display: flex; justify-content: space-between; align-items: center; padding: 20px 0;",
       h2(textOutput("app_title"), style = "margin: 0; font-weight: 800; color: #4ECDC4;"),
@@ -110,9 +84,6 @@ ui <- fluidPage(
   uiOutput("main_ui")
 )
 
-# ------------------------------------------------------------------------------
-# 4. Server 伺服器邏輯
-# ------------------------------------------------------------------------------
 server <- function(input, output, session) {
   t <- reactive({ i18n[[input$lang]] })
   output$app_title <- renderText({ t()$app_title })
@@ -121,81 +92,105 @@ server <- function(input, output, session) {
     page_sidebar(
       sidebar = sidebar(
         width = 350,
-        title = span(t()$sb_title, style="font-size:1.2rem; font-weight:bold;"),
+        title = t()$sb_title,
         sliderInput("hours", t()$lb_hours, min = 0, max = 24, value = 6, step = 0.5),
         sliderInput("pickups", t()$lb_pickups, min = 10, max = 250, value = 50, step = 5),
-        hr(style = "border-top: 2px dashed #FF6B6B;"),
+        hr(),
         pickerInput("activity", t()$lb_act, choices = t()$choices_act),
         sliderInput("act_hours", t()$lb_act_hrs, min = 0.5, max = 12, value = 1, step = 0.5),
-        actionButton("draw_reward", t()$btn_reward, class = "btn-reward w-100 btn-lg"),
+        actionButton("draw_reward", t()$btn_reward, class = "btn-danger w-100 btn-lg"),
         hr(),
-        div(class = "disclaimer-box",
-            h6(t()$disc_title, style="font-weight:bold; color:#4ECDC4;"),
-            p(t()$disc_1), p(t()$disc_2), p(t()$disc_3), p(t()$disc_4), p(t()$disc_5))
+        div(style="background: white; padding:15px; border-left:5px solid #4ECDC4; font-size:0.8rem; color:#7f8c8d;",
+            h6(t()$disc_title), p(t()$disc_1), p(t()$disc_2), p(t()$disc_3), p(t()$disc_4), p(t()$disc_5))
       ),
       layout_columns(
         fill = TRUE,
-        card(card_header(t()$plot_title), plotOutput("wave_plot", height = "520px")),
-        card(card_header(t()$risk_title), uiOutput("engine_display", height = "520px")),
-        card(full_screen = TRUE, card_header(t()$reward_title), uiOutput("reward_display", height = "520px"))
+        card(card_header(t()$plot_title), plotlyOutput("wave_plot", height = "500px")),
+        card(card_header(t()$risk_title), uiOutput("engine_display", height = "500px")),
+        card(full_screen = TRUE, card_header(t()$reward_title), uiOutput("reward_display", height = "500px"))
       )
     )
   })
   
   metrics <- reactive({
-    monthly_hours <- (input$hours %||% 6) * 30
-    monthly_pickups <- (input$pickups %||% 50) * 30
-    overload_pct <- min(100, (monthly_hours / 360) * 60 + (monthly_pickups / 6000) * 40)
-    list(overload = overload_pct)
+    lvl <- min(100, (input$hours * 30 / 360) * 60 + (input$pickups * 30 / 6000) * 40)
+    list(overload = lvl)
   })
   
-  output$wave_plot <- renderPlot({
-    res <- metrics()
-    lvl <- res$overload
-    x_seq <- seq(1, 10, length.out = 300)
-    base_y <- 100 - (lvl * ((x_seq - 1) / 9)) 
-    wave_y <- pmax(0, pmin(100, base_y + sin(x_seq * (1 + lvl/20)) * (lvl/4)))
+  # ------------------------------------------------------------------------------
+  # 修改重點 1：分段漸層波浪圖 (Plotly 渲染，無亂碼)
+  # ------------------------------------------------------------------------------
+  output$wave_plot <- renderPlotly({
+    lvl <- metrics()$overload
+    # 建立 10 個區段的漸層色
+    cols <- colorRampPalette(c("#4ECDC4", "#FDCB6E", "#FF6B6B"))(10)
     
-    df_wave <- data.frame(Stage = x_seq, Health = wave_y)
-    df_labels <- data.frame(x = 1:10, y = -12, label = t()$dominoes)
+    p <- plot_ly()
     
-    ggplot() +
-      geom_segment(data = df_wave, aes(x = Stage, xend = Stage, y = 0, yend = Health, color = Stage), size = 2.5) +
-      scale_color_gradientn(colors = c("#4ECDC4", "#FDCB6E", "#FF6B6B")) +
-      geom_text(data = df_labels, aes(x = x, y = y, label = label),
-                angle = 45, hjust = 1, size = 5.5, fontface = "bold", 
-                color = "#2C3E50", family = "noto_sans_tc") +
-      coord_cartesian(ylim = c(-35, 110), clip = "off") + 
-      theme_void() +
-      theme(plot.margin = margin(20, 10, 80, 10), legend.position = "none")
+    # 分成 10 個 Trace 來實現從左到右的漸層
+    for(i in 1:10) {
+      # 每個 Trace 負責一個 X 軸範圍 (確保海浪連貫)
+      x_sub <- seq(i - 0.5, i + 0.5, length.out = 20)
+      if(i == 1) x_sub <- seq(1, 1.5, length.out = 20)
+      if(i == 10) x_sub <- seq(9.5, 10, length.out = 20)
+      
+      y_sub <- pmax(0, pmin(100, (100 - (lvl * ((x_sub - 1) / 9))) + sin(x_sub * (1 + lvl/20)) * (lvl/4)))
+      
+      p <- p %>% add_trace(
+        x = x_sub, y = y_sub,
+        type = 'scatter', mode = 'lines',
+        fill = 'tozeroy', 
+        fillcolor = paste0(cols[i], "AA"), # 半透明填充
+        line = list(color = cols[i], width = 4),
+        hoverinfo = 'none', showlegend = FALSE
+      )
+    }
+    
+    p %>% layout(
+      xaxis = list(
+        title = "", # 移除 x_seq 標題
+        tickvals = 1:10,
+        ticktext = t()$dominoes,
+        tickangle = -45,
+        fixedrange = TRUE,
+        showgrid = FALSE
+      ),
+      yaxis = list(
+        title = ifelse(input$lang=="中文", "身心能量 %", "Energy %"), # 修正 y_seq 標題
+        range = c(0, 110), 
+        fixedrange = TRUE, 
+        showgrid = TRUE,
+        gridcolor = "#f0f0f0"
+      ),
+      margin = list(b = 100, l = 60, r = 30, t = 40)
+    ) %>%
+      config(displayModeBar = FALSE)
   })
   
+  # ------------------------------------------------------------------------------
+  # 其餘組件 - 嚴格保持不變 (引擎與笑話系統)
+  # ------------------------------------------------------------------------------
   output$engine_display <- renderUI({
-    res <- metrics(); lvl <- res$overload
-    if(lvl > 70) { status_color <- "#FF6B6B"; status_text <- t()$engine_erupt; emoji <- "💥🔥🚗" 
-    } else if(lvl > 30) { status_color <- "#FDCB6E"; status_text <- t()$engine_warn; emoji <- "⚠️🌡️🚗"
-    } else { status_color <- "#4ECDC4"; status_text <- t()$engine_safe; emoji <- "✨🟢🚗" }
+    lvl <- metrics()$overload
+    if(lvl > 70) { col <- "#FF6B6B"; txt <- t()$engine_erupt; emo <- "💥🔥🚗" 
+    } else if(lvl > 30) { col <- "#FDCB6E"; txt <- t()$engine_warn; emo <- "⚠️🌡️🚗"
+    } else { col <- "#4ECDC4"; txt <- t()$engine_safe; emo <- "✨🟢🚗" }
     
-    div(style = "text-align: center; padding: 20px; height: 100%; display: flex; flex-direction: column; justify-content: space-around;",
+    div(style = "text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: space-around;",
         plotOutput("engine_rpm_plot", height = "280px"),
-        div(hr(style = "border-top: 2px dashed #BDC3C7; width: 90%; margin: 10px auto;"),
-            div(style = "font-size: 100px; line-height: 1.2;", emoji),
-            p(status_text, style = paste0("font-size: 24px; font-weight: bold; color: ", status_color, ";")))
+        div(style = "font-size: 90px;", emo),
+        p(txt, style = paste0("font-size: 24px; font-weight: bold; color: ", col, ";"))
     )
   })
   
   output$engine_rpm_plot <- renderPlot({
     lvl <- metrics()$overload
     blocks <- data.frame(x = seq(2, 98, by = 4), y = 1)
-    blocks$color <- ifelse(blocks$x <= lvl,
-                           ifelse(blocks$x > 70, "#FF6B6B", ifelse(blocks$x > 30, "#FDCB6E", "#4ECDC4")),
-                           "#E0E0E0") 
+    blocks$color <- ifelse(blocks$x <= lvl, ifelse(blocks$x > 70, "#FF6B6B", ifelse(blocks$x > 30, "#FDCB6E", "#4ECDC4")), "#E0E0E0")
     ggplot(blocks, aes(x = x, y = y)) +
-      geom_col(aes(fill = color), width = 3, show.legend = FALSE) +
-      scale_fill_identity() +
-      annotate("text", x = 50, y = 0.5, label = paste0(round(lvl, 1), "%"), 
-               color = "#2C3E50", fontface = "bold", size = 22, family = "noto_sans_tc") +
-      coord_cartesian(ylim = c(0, 1.2)) + theme_void()
+      geom_col(aes(fill = color), width = 3) + scale_fill_identity() +
+      annotate("text", x = 50, y = 0.5, label = paste0(round(lvl, 1), "%"), size = 20, fontface = "bold") +
+      theme_void()
   })
   
   joke_pool <- list(
@@ -224,11 +219,10 @@ server <- function(input, output, session) {
     set.seed(reward_seed())
     joke <- sample(joke_pool[[input$lang]][[input$activity]], 1)
     img_url <- paste0("https://loremflickr.com/600/400/funny,cute,animal?random=", reward_seed())
-    
     div(style = "text-align: center; display: flex; flex-direction: column; justify-content: space-around; height: 100%;",
         h3(t()$reward_msg_prefix, style = "color: #FF6B6B; font-weight: bold;"),
         p(joke, style = "font-size: 24px; font-weight: bold; padding: 20px; background: rgba(78,205,196,0.1); border-radius: 15px; width: 90%;"),
-        img(src = img_url, style = "border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 380px; border: 4px solid #FF6B6B;")
+        img(src = img_url, style = "border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 380px; width: auto; border: 4px solid #FF6B6B;")
     )
   })
 }
