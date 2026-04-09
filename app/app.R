@@ -1,10 +1,4 @@
 # ==============================================================================
-# Project: Digital Domino - Life Regeneration Simulator (Final Production v11.0)
-# Features: Noto Sans TC Support, Gradient Wave Plot, Engine RPM, ISO 42001 Safe
-# ==============================================================================
-
-# 1. 自動加載與安裝依賴套件
-# ==============================================================================
 # Project: Digital Domino - Life Regeneration Simulator (WebR / ShinyLive 專用版)
 # Features: 移除 pacman 依賴、支援 Noto Sans TC 中文圖表、漸層波浪圖
 # ==============================================================================
@@ -25,7 +19,7 @@ sysfonts::font_add_google("Noto Sans TC", "noto_sans_tc")
 showtext::showtext_auto()
 
 # ------------------------------------------------------------------------------
-# 2. 嚴謹雙語字典 (i18n) - 包含溯源說明與安全內容
+# 2. 嚴謹雙語字典 (i18n)
 # ------------------------------------------------------------------------------
 i18n <- list(
   "中文" = list(
