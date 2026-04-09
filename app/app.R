@@ -5,8 +5,11 @@
 
 # 1. 自動加載與安裝依賴套件
 # ==============================================================================
-# 1. 載入必備套件 (ShinyLive 專用寫法，嚴禁使用 pacman)
+# Project: Digital Domino - Life Regeneration Simulator (WebR / ShinyLive 專用版)
+# Features: 移除 pacman 依賴、支援 Noto Sans TC 中文圖表、漸層波浪圖
 # ==============================================================================
+
+# 1. 載入必備套件 (ShinyLive 嚴禁使用 pacman 或 install.packages)
 library(shiny)
 library(bslib)
 library(tidyverse)
@@ -16,16 +19,10 @@ library(shinyWidgets)
 library(munsell)
 library(showtext)
 
-# --- 關鍵：處理 ShinyLive 中文字型 ---
-# 從 Google Fonts 下載思源黑體，確保瀏覽器環境能正確顯示中文標籤
-font_add_google("Noto Sans TC", "noto_sans_tc")
-showtext_auto()
-
-# ... (下方字典與 UI 邏輯完全保持不變) ...
-# --- 關鍵：處理 ShinyLive 中文字型 ---
-# 從 Google Fonts 下載思源黑體，確保瀏覽器環境能正確顯示中文標籤
-font_add_google("Noto Sans TC", "noto_sans_tc")
-showtext_auto()
+# --- 關鍵：處理 ShinyLive 繪圖中文字型 ---
+# 從 Google Fonts 載入思源黑體，確保 ggplot2 在網頁端不會顯示為方塊
+sysfonts::font_add_google("Noto Sans TC", "noto_sans_tc")
+showtext::showtext_auto()
 
 # ------------------------------------------------------------------------------
 # 2. 嚴謹雙語字典 (i18n) - 包含溯源說明與安全內容
@@ -158,7 +155,6 @@ server <- function(input, output, session) {
     list(overload = overload_pct)
   })
   
-  # 修改 1：漸層波浪圖 (修正 X 軸標籤與字體)
   output$wave_plot <- renderPlot({
     res <- metrics()
     lvl <- res$overload
@@ -180,7 +176,6 @@ server <- function(input, output, session) {
       theme(plot.margin = margin(20, 10, 80, 10), legend.position = "none")
   })
   
-  # 修改 2：引擎儀表 (佈局優化填滿空間)
   output$engine_display <- renderUI({
     res <- metrics(); lvl <- res$overload
     if(lvl > 70) { status_color <- "#FF6B6B"; status_text <- t()$engine_erupt; emoji <- "💥🔥🚗" 
@@ -209,9 +204,6 @@ server <- function(input, output, session) {
       coord_cartesian(ylim = c(0, 1.2)) + theme_void()
   })
   
-  # ------------------------------------------------------------------------------
-  # 5. 安全笑話池 (依照 input$lang 與 input$activity 完美對齊)
-  # ------------------------------------------------------------------------------
   joke_pool <- list(
     "中文" = list(
       "戶外運動" = c("🏃‍♂️ 我去健身房問教練：『我想讓全身肌肉都動起來該用哪台機器？』教練說：『去幫我把車推上來。』", "💪 跑步是為了當生活想擊倒你時，你至少跑得贏生活。"),
@@ -236,7 +228,6 @@ server <- function(input, output, session) {
   
   output$reward_display <- renderUI({
     set.seed(reward_seed())
-    # 這裡修正了語言映射 Bug
     joke <- sample(joke_pool[[input$lang]][[input$activity]], 1)
     img_url <- paste0("https://loremflickr.com/600/400/funny,cute,animal?random=", reward_seed())
     
